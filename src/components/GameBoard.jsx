@@ -1,0 +1,96 @@
+import { useEffect, useState } from "react";
+import { GameManager } from "../logic/GameManager";
+import Card from "./Card";
+
+export default function GameBoard({ mode }) {
+  const [game, setGame] = useState(() => new GameManager(mode));
+  const [updateFlag, setUpdateFlag] = useState(false); // UI-Update trigger
+  const [selectedCardIndex, setSelectedCardIndex] = useState(null);
+
+  const triggerUpdate = () => setUpdateFlag(prev => !prev);
+
+  const playSelectedCard = () => {
+    if (selectedCardIndex === null) return;
+    const success = game.playCard(selectedCardIndex);
+    if (success) {
+      setSelectedCardIndex(null);
+      if (mode.startsWith("bot") && game.currentPlayer === "player2") {
+        setTimeout(() => {
+          game.botPlay(game.hands.player1);
+          triggerUpdate();
+        }, 500);
+      }
+    }
+    triggerUpdate();
+  };
+
+  const drawCard = () => {
+    game.drawCard();
+    if (mode.startsWith("bot") && game.currentPlayer === "player2") {
+      setTimeout(() => {
+        game.botPlay(game.hands.player1);
+        triggerUpdate();
+      }, 500);
+    }
+    triggerUpdate();
+  };
+
+  const restartGame = () => {
+    const newGame = new GameManager(mode);
+    setGame(newGame);
+    setSelectedCardIndex(null);
+    triggerUpdate();
+  };
+
+  useEffect(() => {
+    if (mode.startsWith("bot") && game.currentPlayer === "player2") {
+      game.botPlay(game.hands.player1);
+      triggerUpdate();
+    }
+  }, []);
+
+  const hand = game.hands[game.currentPlayer];
+  const isHumanTurn = mode === "local" || (mode.startsWith("bot") && game.currentPlayer === "player1");
+
+  return (
+    <div style={{ padding: "1rem" }}>
+      <h2>Modus: {mode}</h2>
+      <p>Aktueller Spieler: {game.currentPlayer}</p>
+      <p>Ablagekarte:</p>
+      <Card card={game.topCard} />
+      <h3>Deine Hand:</h3>
+      <div style={{ display: "flex", flexWrap: "wrap" }}>
+        {hand.map((card, i) => (
+          <div
+            key={i}
+            onClick={() => isHumanTurn && setSelectedCardIndex(i)}
+            style={{
+              cursor: isHumanTurn ? "pointer" : "default",
+              border: selectedCardIndex === i ? "2px solid blue" : "none",
+            }}
+          >
+            <Card card={card} />
+          </div>
+        ))}
+      </div>
+
+      {isHumanTurn && (
+        <div style={{ marginTop: "1rem" }}>
+          <button onClick={playSelectedCard}>Karte spielen</button>
+          <button onClick={drawCard}>Karte ziehen</button>
+        </div>
+      )}
+
+      <div style={{ marginTop: "1rem" }}>
+        <p>Spielstand:</p>
+        <p>Player 1: {game.rounds.player1} | Player 2: {game.rounds.player2}</p>
+        {game.winner && (
+          <>
+            <h3>{game.winner} hat das Spiel gewonnen!</h3>
+            <button onClick={restartGame}>Neues Spiel</button>
+          </>
+        )}
+      </div>
+    </div>
+  );
+}
