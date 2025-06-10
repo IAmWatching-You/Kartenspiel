@@ -8,6 +8,7 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
   const [updateFlag, setUpdateFlag] = useState(false); // UI-Update trigger
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
   const [message, setMessage] = useState("");
+  const [showWinScreen, setShowWinScreen] = useState(false);
 
   const triggerUpdate = () => setUpdateFlag(prev => !prev);
 
@@ -20,6 +21,14 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
     const success = game.playCard(selectedCardIndex);
     if (success) {
       setSelectedCardIndex(null);
+      if (game.winner) {
+        setShowWinScreen(true);
+        setTimeout(() => {
+          setShowWinScreen(false);
+          if (game.winner !== "draw") restartGame();
+        }, 5000);
+        return;
+      }
       if (mode.startsWith("bot") && game.currentPlayer === "player2") {
         setTimeout(() => {
           game.botPlay(game.hands.player1);
@@ -43,6 +52,14 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
       return;
     }
     game.drawCard();
+    if (game.winner) {
+      setShowWinScreen(true);
+      setTimeout(() => {
+        setShowWinScreen(false);
+        if (game.winner !== "draw") restartGame();
+      }, 5000);
+      return;
+    }
     if (mode.startsWith("bot") && game.currentPlayer === "player2") {
       setTimeout(() => {
         game.botPlay(game.hands.player1);
@@ -57,6 +74,7 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
     setGame(newGame);
     setSelectedCardIndex(null);
     setMessage("");
+    setShowWinScreen(false);
     triggerUpdate();
   };
 
@@ -84,6 +102,24 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
 
   return (
     <div style={{ padding: "1rem" }}>
+      {showWinScreen && game.winner && (
+        <div style={{
+          position: "fixed",
+          top: 0,
+          left: 0,
+          width: "100vw",
+          height: "100vh",
+          background: "rgba(0,0,0,0.7)",
+          color: "white",
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          zIndex: 1000
+        }}>
+          <h2 style={{ fontSize: 32 }}>{getWinnerText()}</h2>
+        </div>
+      )}
       <h2>Modus: {mode}</h2>
       <p>Aktueller Spieler: {getPlayerName(game.currentPlayer)}</p>
       <p>Ablagekarte:</p>
@@ -118,7 +154,7 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
       <div style={{ marginTop: "1rem" }}>
         <p>Spielstand:</p>
         <p>{getPlayerName("player1")}: {game.rounds.player1} | {getPlayerName("player2")}: {game.rounds.player2}</p>
-        {game.winner && (
+        {game.winner && !showWinScreen && (
           <>
             <h3>{getWinnerText()}</h3>
             <button onClick={restartGame}>Neues Spiel</button>

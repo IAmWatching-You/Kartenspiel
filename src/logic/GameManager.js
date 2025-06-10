@@ -5,6 +5,7 @@ import { botPlayEasy, botPlayHard } from "./botLogic";
 export class GameManager {
   constructor(mode) {
     this.mode = mode;
+    this.rounds = { player1: 0, player2: 0 };
     this.resetGame();
   }
 
@@ -17,8 +18,13 @@ export class GameManager {
     };
     this.topCard = topCard;
     this.deck = remainingDeck;
-    this.currentPlayer = Math.random() < 0.5 ? "player1" : "player2";
-    this.rounds = { player1: 0, player2: 0 };
+    // Im Bot-Modus ist der Mensch immer player1 und beginnt immer
+    if (this.mode && this.mode.startsWith("bot")) {
+      this.currentPlayer = "player1";
+    } else {
+      this.currentPlayer = Math.random() < 0.5 ? "player1" : "player2";
+    }
+    // Rundenstand NICHT zurücksetzen!
     this.winner = null;
   }
 
