@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 import { GameManager } from "../logic/GameManager";
 import Card from "./Card";
 
 export default function GameBoard({ mode, player1Name = "Player 1", player2Name = "Player 2" }) {
   const [game, setGame] = useState(() => new GameManager(mode));
-  const [updateFlag, setUpdateFlag] = useState(false);
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
   const [message, setMessage] = useState("");
   const [showWinScreen, setShowWinScreen] = useState(false);
@@ -35,31 +34,47 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
     return `${winnerName} hat ${game.winner === "player1" ? "gewonnen" : "verloren"}!`;
   };
 
-  const triggerUpdate = () => setUpdateFlag(prev => !prev);
+  const updateGame = useCallback((newGame) => {
+    setGame(prevGame => ({
+      ...prevGame,
+      ...newGame
+    }));
+  }, []);
 
-  const restartGame = () => {
+  const restartGame = useCallback(() => {
     setGame(new GameManager(mode));
     setSelectedCardIndex(null);
     setMessage("");
     setShowWinScreen(false);
     setBotThinking(false);
-  };
+  }, [mode]);
 
-  // Bot-Logik mit Verzögerung
+  // Bot-Logik
   useEffect(() => {
     let botTimer;
-    if (isBotMode && game.currentPlayer === "player2" && !game.winner && !botThinking) {
+    const executeBotMove = () => {
       setBotThinking(true);
       botTimer = setTimeout(() => {
-        game.botPlay();
-        triggerUpdate();
+        setGame(prevGame => {
+          const updatedGame = new GameManager(mode);
+          Object.assign(updatedGame, prevGame);
+          updatedGame.botPlay();
+          return updatedGame;
+        });
         setBotThinking(false);
       }, 1000);
-    }
-    return () => clearTimeout(botTimer);
-  }, [game.currentPlayer, game.winner, isBotMode, botThinking, updateFlag]);
+    };
 
-  const playSelectedCard = () => {
+    if (isBotMode && game.currentPlayer === "player2" && !game.winner && !botThinking) {
+      executeBotMove();
+    }
+
+    return () => {
+      if (botTimer) clearTimeout(botTimer);
+    };
+  }, [game.currentPlayer, game.winner, isBotMode, botThinking, mode]);
+
+  const playSelectedCard = useCallback(() => {
     if (!isHumanTurn) {
       setMessage("Warte bis du an der Reihe bist!");
       return;
@@ -71,58 +86,71 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
       return;
     }
 
-    const prevRounds = { ...game.rounds };
-    const success = game.playCard(selectedCardIndex);
-    
-    if (success) {
-      setSelectedCardIndex(null);
-      const roundWon = (game.rounds.player1 > prevRounds.player1) || 
-                      (game.rounds.player2 > prevRounds.player2);
-                      
-      if (game.winner || roundWon) {
-        setShowWinScreen(true);
-        setTimeout(() => {
-          setShowWinScreen(false);
-          if (game.winner) restartGame();
-        }, 3000);
+    setGame(prevGame => {
+      const updatedGame = new GameManager(mode);
+      Object.assign(updatedGame, prevGame);
+      
+      const prevRounds = { ...updatedGame.rounds };
+      const success = updatedGame.playCard(selectedCardIndex);
+      
+      if (success) {
+        setSelectedCardIndex(null);
+        const roundWon = (updatedGame.rounds.player1 > prevRounds.player1) || 
+                        (updatedGame.rounds.player2 > prevRounds.player2);
+                        
+        if (updatedGame.winner || roundWon) {
+          setShowWinScreen(true);
+          setTimeout(() => {
+            setShowWinScreen(false);
+            if (updatedGame.winner) restartGame();
+          }, 3000);
+        }
+        return updatedGame;
+      } else {
+        setMessage("Diese Karte kann nicht gespielt werden.");
+        return prevGame;
       }
-    } else {
-      setMessage("Diese Karte kann nicht gespielt werden.");
-    }
-    triggerUpdate();
-  };
+    });
+  }, [isHumanTurn, selectedCardIndex, mode, restartGame]);
 
-  const drawCard = () => {
+  const drawCard = useCallback(() => {
     if (!isHumanTurn) {
       setMessage("Warte bis du an der Reihe bist!");
       return;
     }
 
     setMessage("");
-    if (game.deck.length === 0) {
-      setMessage("Der Nachziehstapel ist leer.");
-      return;
-    }
-    if (game.hands[game.currentPlayer].length >= 5) {
-      setMessage("Du hast bereits 5 Karten auf der Hand.");
-      return;
-    }
 
-    const prevRounds = { ...game.rounds };
-    game.drawCard();
-    
-    const roundWon = (game.rounds.player1 > prevRounds.player1) || 
-                    (game.rounds.player2 > prevRounds.player2);
-                    
-    if (game.winner || roundWon) {
-      setShowWinScreen(true);
-      setTimeout(() => {
-        setShowWinScreen(false);
-        if (game.winner) restartGame();
-      }, 3000);
-    }
-    triggerUpdate();
-  };
+    setGame(prevGame => {
+      const updatedGame = new GameManager(mode);
+      Object.assign(updatedGame, prevGame);
+
+      if (updatedGame.deck.length === 0) {
+        setMessage("Der Nachziehstapel ist leer.");
+        return prevGame;
+      }
+      if (updatedGame.hands[updatedGame.currentPlayer].length >= 5) {
+        setMessage("Du hast bereits 5 Karten auf der Hand.");
+        return prevGame;
+      }
+
+      const prevRounds = { ...updatedGame.rounds };
+      updatedGame.drawCard();
+      
+      const roundWon = (updatedGame.rounds.player1 > prevRounds.player1) || 
+                      (updatedGame.rounds.player2 > prevRounds.player2);
+                      
+      if (updatedGame.winner || roundWon) {
+        setShowWinScreen(true);
+        setTimeout(() => {
+          setShowWinScreen(false);
+          if (updatedGame.winner) restartGame();
+        }, 3000);
+      }
+      
+      return updatedGame;
+    });
+  }, [isHumanTurn, mode, restartGame]);
 
   return (
     <div style={{ padding: "1rem" }}>
