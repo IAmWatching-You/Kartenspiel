@@ -49,5 +49,4 @@ export default function StartScreen({ onStart }) {
       </div>
     </div>
   );
-// ...existing code...
 }
