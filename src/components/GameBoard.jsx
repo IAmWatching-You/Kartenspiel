@@ -58,7 +58,8 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
         setGame(prevGame => {
           const updatedGame = new GameManager(mode);
           Object.assign(updatedGame, prevGame);
-          updatedGame.botPlay();
+          // Pass true flag to botPlay to allow bot moves (e.g. drawing a card)
+          updatedGame.botPlay(true);
           return updatedGame;
         });
         setBotThinking(false);
