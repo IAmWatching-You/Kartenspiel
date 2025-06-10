@@ -1,71 +1,90 @@
-
 import { useEffect, useState } from "react";
 import { GameManager } from "../logic/GameManager";
 import Card from "./Card";
 
 export default function GameBoard({ mode, player1Name = "Player 1", player2Name = "Player 2" }) {
   const [game, setGame] = useState(() => new GameManager(mode));
-  const [updateFlag, setUpdateFlag] = useState(false); // UI-Update trigger
+  const [updateFlag, setUpdateFlag] = useState(false);
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
   const [message, setMessage] = useState("");
   const [showWinScreen, setShowWinScreen] = useState(false);
+  const [botThinking, setBotThinking] = useState(false);
 
   const isBotMode = mode.startsWith("bot");
 
-  // Im Bot-Modus immer die Hand von player1 (Mensch) anzeigen
+  // Im Bot-Modus IMMER die Hand von player1 (Mensch) anzeigen
   const hand = isBotMode ? game.hands["player1"] : game.hands[game.currentPlayer];
-  const isHumanTurn = mode === "local" || (isBotMode && game.currentPlayer === "player1");
-  // Für Kartenanzahl-Anzeige: Im Bot-Modus immer die Kartenanzahl des Bots anzeigen
+  const isHumanTurn = !isBotMode || game.currentPlayer === "player1";
+  
+  // Für Kartenanzahl-Anzeige
   const otherKey = isBotMode ? "player2" : (game.currentPlayer === "player1" ? "player2" : "player1");
   const otherHandCount = game.hands[otherKey]?.length || 0;
+
   const getPlayerName = (key) => {
-    if (mode === "local") {
-      return key === "player1" ? player1Name : player2Name;
-    }
     if (isBotMode) {
       return key === "player1" ? player1Name : "Bot";
     }
-    return key === "player1" ? "Player 1" : "Player 2";
+    return key === "player1" ? player1Name : player2Name;
   };
+
   const getWinnerText = () => {
     if (game.winner === "draw") {
       return "Unentschieden! Beide bekommen einen Punkt.";
     }
-    return `${getPlayerName(game.winner)} hat das Spiel gewonnen!`;
+    const winnerName = getPlayerName(game.winner);
+    return `${winnerName} hat ${game.winner === "player1" ? "gewonnen" : "verloren"}!`;
   };
 
   const triggerUpdate = () => setUpdateFlag(prev => !prev);
 
-  // Bot spielt automatisch, solange er dran ist und das Spiel nicht vorbei ist
+  const restartGame = () => {
+    setGame(new GameManager(mode));
+    setSelectedCardIndex(null);
+    setMessage("");
+    setShowWinScreen(false);
+    setBotThinking(false);
+  };
+
+  // Bot-Logik mit Verzögerung
   useEffect(() => {
-    if (isBotMode && game.currentPlayer === "player2" && !game.winner) {
-      setTimeout(() => {
-        game.botPlay(game.hands.player1);
+    let botTimer;
+    if (isBotMode && game.currentPlayer === "player2" && !game.winner && !botThinking) {
+      setBotThinking(true);
+      botTimer = setTimeout(() => {
+        game.botPlay();
         triggerUpdate();
-      }, 500);
+        setBotThinking(false);
+      }, 1000);
     }
-  }, [game.currentPlayer, updateFlag, game.winner, isBotMode]);
+    return () => clearTimeout(botTimer);
+  }, [game.currentPlayer, game.winner, isBotMode, botThinking, updateFlag]);
 
   const playSelectedCard = () => {
+    if (!isHumanTurn) {
+      setMessage("Warte bis du an der Reihe bist!");
+      return;
+    }
+
     setMessage("");
     if (selectedCardIndex === null) {
       setMessage("Bitte wähle zuerst eine Karte aus.");
       return;
     }
+
     const prevRounds = { ...game.rounds };
     const success = game.playCard(selectedCardIndex);
+    
     if (success) {
       setSelectedCardIndex(null);
-      // Win-Screen für Runde oder Gesamtsieg
-      const roundWon = (game.rounds.player1 > prevRounds.player1 && game.currentPlayer === "player1") ||
-                       (game.rounds.player2 > prevRounds.player2 && game.currentPlayer === "player2");
+      const roundWon = (game.rounds.player1 > prevRounds.player1) || 
+                      (game.rounds.player2 > prevRounds.player2);
+                      
       if (game.winner || roundWon) {
         setShowWinScreen(true);
         setTimeout(() => {
           setShowWinScreen(false);
-          if (game.winner && game.winner !== "draw") restartGame();
-        }, 5000);
-        return;
+          if (game.winner) restartGame();
+        }, 3000);
       }
     } else {
       setMessage("Diese Karte kann nicht gespielt werden.");
@@ -74,6 +93,11 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
   };
 
   const drawCard = () => {
+    if (!isHumanTurn) {
+      setMessage("Warte bis du an der Reihe bist!");
+      return;
+    }
+
     setMessage("");
     if (game.deck.length === 0) {
       setMessage("Der Nachziehstapel ist leer.");
@@ -83,27 +107,20 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
       setMessage("Du hast bereits 5 Karten auf der Hand.");
       return;
     }
+
     const prevRounds = { ...game.rounds };
     game.drawCard();
-    const roundWon = (game.rounds.player1 > prevRounds.player1 && game.currentPlayer === "player1") ||
-                     (game.rounds.player2 > prevRounds.player2 && game.currentPlayer === "player2");
+    
+    const roundWon = (game.rounds.player1 > prevRounds.player1) || 
+                    (game.rounds.player2 > prevRounds.player2);
+                    
     if (game.winner || roundWon) {
       setShowWinScreen(true);
       setTimeout(() => {
         setShowWinScreen(false);
-        if (game.winner && game.winner !== "draw") restartGame();
-      }, 5000);
-      return;
+        if (game.winner) restartGame();
+      }, 3000);
     }
-    triggerUpdate();
-  };
-
-  const restartGame = () => {
-    const newGame = new GameManager(mode);
-    setGame(newGame);
-    setSelectedCardIndex(null);
-    setMessage("");
-    setShowWinScreen(false);
     triggerUpdate();
   };
 

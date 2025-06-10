@@ -1,21 +1,28 @@
 import { useState } from "react";
 
+export default function StartScreen({ onStart }) {
   const [showNameInputs, setShowNameInputs] = useState(false);
   const [showBotNameInput, setShowBotNameInput] = useState(false);
   const [player1, setPlayer1] = useState("");
   const [player2, setPlayer2] = useState("");
-  const [botMode, setBotMode] = useState(null); // "bot-easy" oder "bot-hard"
+  const [botMode, setBotMode] = useState(null);
 
   const handleLocalStart = () => {
     setShowNameInputs(true);
     setShowBotNameInput(false);
     setBotMode(null);
+    // Namen zurücksetzen beim Moduswechsel
+    setPlayer1("");
+    setPlayer2("");
   };
 
   const handleBotStart = (mode) => {
     setShowBotNameInput(true);
     setShowNameInputs(false);
     setBotMode(mode);
+    // Namen zurücksetzen beim Moduswechsel
+    setPlayer1("");
+    setPlayer2("Bot");
   };
 
   const handleStartGame = () => {
@@ -36,6 +43,7 @@ import { useState } from "react";
           <button onClick={() => handleBotStart("bot-hard")}>Gegen Bot (schwer)</button>
           <button onClick={handleLocalStart}>2 Spieler lokal</button>
         </div>
+        
         {showBotNameInput && (
           <div style={{ marginTop: "1rem" }}>
             <input
@@ -51,11 +59,19 @@ import { useState } from "react";
               disabled
               style={{ marginRight: 8, background: '#eee' }}
             />
-            <button onClick={handleStartGame} disabled={!player1.trim()}>
+            <button 
+              onClick={handleStartGame} 
+              disabled={!player1.trim()}
+              style={{ 
+                padding: '8px 16px',
+                backgroundColor: player1.trim() ? '#4CAF50' : '#ccc'
+              }}
+            >
               Spiel starten
             </button>
           </div>
         )}
+
         {showNameInputs && (
           <div style={{ marginTop: "1rem" }}>
             <input
@@ -72,7 +88,14 @@ import { useState } from "react";
               onChange={e => setPlayer2(e.target.value)}
               style={{ marginRight: 8 }}
             />
-            <button onClick={handleStartGame} disabled={!player1.trim() || !player2.trim()}>
+            <button 
+              onClick={handleStartGame} 
+              disabled={!player1.trim() || !player2.trim()}
+              style={{ 
+                padding: '8px 16px',
+                backgroundColor: (player1.trim() && player2.trim()) ? '#4CAF50' : '#ccc'
+              }}
+            >
               Spiel starten
             </button>
           </div>
@@ -80,4 +103,4 @@ import { useState } from "react";
       </div>
     </div>
   );
-// Datei korrekt abschließen
+}
