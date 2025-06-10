@@ -95,10 +95,11 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
     }
   }, [game.currentPlayer, updateFlag, game.winner]);
 
-  const hand = game.hands[game.currentPlayer];
+  // Im Bot-Modus immer die Hand von player1 (Mensch) anzeigen
+  const hand = mode.startsWith("bot") ? game.hands["player1"] : game.hands[game.currentPlayer];
   const isHumanTurn = mode === "local" || (mode.startsWith("bot") && game.currentPlayer === "player1");
-  // Für Kartenanzahl-Anzeige
-  const otherKey = game.currentPlayer === "player1" ? "player2" : "player1";
+  // Für Kartenanzahl-Anzeige: Im Bot-Modus immer die Kartenanzahl des Bots anzeigen
+  const otherKey = mode.startsWith("bot") ? "player2" : (game.currentPlayer === "player1" ? "player2" : "player1");
   const otherHandCount = game.hands[otherKey]?.length || 0;
   const getPlayerName = (key) => {
     if (mode === "local") {
