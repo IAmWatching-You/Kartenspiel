@@ -3,7 +3,7 @@ import { GameManager } from "../logic/GameManager";
 import Card from "./Card";
 
 
-export default function GameBoard({ mode }) {
+export default function GameBoard({ mode, player1Name = "Player 1", player2Name = "Player 2" }) {
   const [game, setGame] = useState(() => new GameManager(mode));
   const [updateFlag, setUpdateFlag] = useState(false); // UI-Update trigger
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
@@ -69,11 +69,23 @@ export default function GameBoard({ mode }) {
 
   const hand = game.hands[game.currentPlayer];
   const isHumanTurn = mode === "local" || (mode.startsWith("bot") && game.currentPlayer === "player1");
+  const getPlayerName = (key) => {
+    if (mode === "local") {
+      return key === "player1" ? player1Name : player2Name;
+    }
+    return key === "player1" ? "Player 1" : "Player 2";
+  };
+  const getWinnerText = () => {
+    if (game.winner === "draw") {
+      return "Unentschieden! Beide bekommen einen Punkt.";
+    }
+    return `${getPlayerName(game.winner)} hat das Spiel gewonnen!`;
+  };
 
   return (
     <div style={{ padding: "1rem" }}>
       <h2>Modus: {mode}</h2>
-      <p>Aktueller Spieler: {game.currentPlayer}</p>
+      <p>Aktueller Spieler: {getPlayerName(game.currentPlayer)}</p>
       <p>Ablagekarte:</p>
       <Card card={game.topCard} />
       <h3>Deine Hand:</h3>
@@ -105,10 +117,10 @@ export default function GameBoard({ mode }) {
 
       <div style={{ marginTop: "1rem" }}>
         <p>Spielstand:</p>
-        <p>Player 1: {game.rounds.player1} | Player 2: {game.rounds.player2}</p>
+        <p>{getPlayerName("player1")}: {game.rounds.player1} | {getPlayerName("player2")}: {game.rounds.player2}</p>
         {game.winner && (
           <>
-            <h3>{game.winner} hat das Spiel gewonnen!</h3>
+            <h3>{getWinnerText()}</h3>
             <button onClick={restartGame}>Neues Spiel</button>
           </>
         )}

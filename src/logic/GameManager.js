@@ -27,11 +27,12 @@ export class GameManager {
   }
 
   isCardPlayable(card) {
-    return (
-      card.suit === this.topCard.suit ||
-      card.value >= this.topCard.value ||
-      (card.label === "A" && this.topCard.label === "K")
-    );
+    // Ass als 14 werten, wenn auf König gelegt wird
+    const topValue = (this.topCard.label === "K" && card.label === "A") ? 14 : this.topCard.value;
+    const cardValue = (card.label === "A" && this.topCard.label === "K") ? 14 : card.value;
+    if (card.suit === this.topCard.suit) return true;
+    if (card.suit !== this.topCard.suit && cardValue >= topValue) return true;
+    return false;
   }
 
   playCard(cardIndex) {
@@ -42,33 +43,54 @@ export class GameManager {
     hand.splice(cardIndex, 1);
     this.topCard = card;
 
+    // Prüfe, ob Spieler gewonnen hat (Hand leer)
     if (hand.length === 0) {
       this.rounds[this.currentPlayer]++;
+      // Prüfe auf Spielsieg
       if (this.rounds[this.currentPlayer] === 2) {
         this.winner = this.currentPlayer;
       } else {
         this.resetGame();
       }
-    } else {
-      this.switchPlayer();
+      return true;
     }
 
+    // Prüfe, ob der nächste Spieler überhaupt noch spielen kann
+    this.switchPlayer();
+    this.checkPattSituation();
     return true;
+  }
+
+  // Prüft, ob beide Spieler nicht mehr spielen können (Patt)
+  checkPattSituation() {
+    const canCurrent = this.hands[this.currentPlayer].some(card => this.isCardPlayable(card));
+    const other = this.currentPlayer === "player1" ? "player2" : "player1";
+    const canOther = this.hands[other].some(card => this.isCardPlayable(card));
+    if (!canCurrent && !canOther) {
+      // Beide können nicht spielen: Unentschieden, beide bekommen einen Punkt
+      this.rounds.player1++;
+      this.rounds.player2++;
+      if (this.rounds.player1 === 2 && this.rounds.player2 === 2) {
+        this.winner = "draw";
+      }
+      this.resetGame();
+    }
   }
 
   drawCard() {
     if (this.hands[this.currentPlayer].length >= 5 || this.deck.length === 0) {
       this.switchPlayer();
+      this.checkPattSituation();
       return;
     }
 
     const newCard = this.deck.shift();
     this.hands[this.currentPlayer].push(newCard);
 
-    if (this.isCardPlayable(newCard)) {
-      // Optionally auto-play? Leave for user.
-    } else if (this.hands[this.currentPlayer].length === 5) {
+    // Nachziehen beendet den Zug nur, wenn Hand voll ist oder Karte nicht spielbar
+    if (!this.isCardPlayable(newCard) && this.hands[this.currentPlayer].length === 5) {
       this.switchPlayer();
+      this.checkPattSituation();
     }
   }
 

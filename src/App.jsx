@@ -3,14 +3,14 @@ import StartScreen from "./components/StartScreen";
 import GameBoard from "./components/GameBoard";
 
 function App() {
-  const [mode, setMode] = useState(null);
+  const [gameConfig, setGameConfig] = useState(null);
 
   return (
     <div>
-      {mode === null ? (
-        <StartScreen onStart={setMode} />
+      {gameConfig === null ? (
+        <StartScreen onStart={setGameConfig} />
       ) : (
-        <GameBoard mode={mode} />
+        <GameBoard mode={gameConfig.mode} player1Name={gameConfig.player1} player2Name={gameConfig.player2} />
       )}
     </div>
   );

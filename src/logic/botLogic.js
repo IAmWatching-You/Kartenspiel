@@ -9,8 +9,10 @@ export function botPlayHard(botHand, topCard, opponentHand) {
 }
 
 function isPlayable(card, topCard) {
+  // Ass als 14 werten, wenn auf König gelegt wird
+  const topValue = (topCard.label === "K" && card.label === "A") ? 14 : topCard.value;
+  const cardValue = (card.label === "A" && topCard.label === "K") ? 14 : card.value;
   if (card.suit === topCard.suit) return true;
-  if (card.value >= topCard.value) return true;
-  if (card.label === "A" && topCard.label === "K") return true;
+  if (card.suit !== topCard.suit && cardValue >= topValue) return true;
   return false;
 }
