@@ -69,11 +69,19 @@ export class GameManager {
 
   // Prüft, ob beide Spieler nicht mehr spielen können (Patt)
   checkPattSituation() {
-    const canCurrent = this.hands[this.currentPlayer].some(card => this.isCardPlayable(card));
-    const other = this.currentPlayer === "player1" ? "player2" : "player1";
-    const canOther = this.hands[other].some(card => this.isCardPlayable(card));
-    if (!canCurrent && !canOther) {
-      // Beide können nicht spielen: Unentschieden, beide bekommen einen Punkt
+    const current = this.currentPlayer;
+    const other = current === "player1" ? "player2" : "player1";
+    const handCurrent = this.hands[current];
+    const handOther = this.hands[other];
+    const canCurrent = handCurrent.some(card => this.isCardPlayable(card));
+    const canOther = handOther.some(card => this.isCardPlayable(card));
+    // Patt nur, wenn beide 5 Karten haben und keine spielbar ist
+    if (
+      handCurrent.length === 5 &&
+      handOther.length === 5 &&
+      !canCurrent &&
+      !canOther
+    ) {
       this.rounds.player1++;
       this.rounds.player2++;
       if (this.rounds.player1 === 2 && this.rounds.player2 === 2) {

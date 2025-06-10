@@ -18,14 +18,18 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
       setMessage("Bitte wähle zuerst eine Karte aus.");
       return;
     }
+    const prevRounds = { ...game.rounds };
     const success = game.playCard(selectedCardIndex);
     if (success) {
       setSelectedCardIndex(null);
-      if (game.winner) {
+      // Win-Screen für Runde oder Gesamtsieg
+      const roundWon = (game.rounds.player1 > prevRounds.player1 && game.currentPlayer === "player1") ||
+                       (game.rounds.player2 > prevRounds.player2 && game.currentPlayer === "player2");
+      if (game.winner || roundWon) {
         setShowWinScreen(true);
         setTimeout(() => {
           setShowWinScreen(false);
-          if (game.winner !== "draw") restartGame();
+          if (game.winner && game.winner !== "draw") restartGame();
         }, 5000);
         return;
       }
@@ -51,12 +55,15 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
       setMessage("Du hast bereits 5 Karten auf der Hand.");
       return;
     }
+    const prevRounds = { ...game.rounds };
     game.drawCard();
-    if (game.winner) {
+    const roundWon = (game.rounds.player1 > prevRounds.player1 && game.currentPlayer === "player1") ||
+                     (game.rounds.player2 > prevRounds.player2 && game.currentPlayer === "player2");
+    if (game.winner || roundWon) {
       setShowWinScreen(true);
       setTimeout(() => {
         setShowWinScreen(false);
-        if (game.winner !== "draw") restartGame();
+        if (game.winner && game.winner !== "draw") restartGame();
       }, 5000);
       return;
     }
@@ -78,15 +85,21 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
     triggerUpdate();
   };
 
+  // Bot spielt automatisch, solange er dran ist und das Spiel nicht vorbei ist
   useEffect(() => {
-    if (mode.startsWith("bot") && game.currentPlayer === "player2") {
-      game.botPlay(game.hands.player1);
-      triggerUpdate();
+    if (mode.startsWith("bot") && game.currentPlayer === "player2" && !game.winner) {
+      setTimeout(() => {
+        game.botPlay(game.hands.player1);
+        triggerUpdate();
+      }, 500);
     }
-  }, []);
+  }, [game.currentPlayer, updateFlag, game.winner]);
 
   const hand = game.hands[game.currentPlayer];
   const isHumanTurn = mode === "local" || (mode.startsWith("bot") && game.currentPlayer === "player1");
+  // Für Kartenanzahl-Anzeige
+  const otherKey = game.currentPlayer === "player1" ? "player2" : "player1";
+  const otherHandCount = game.hands[otherKey]?.length || 0;
   const getPlayerName = (key) => {
     if (mode === "local") {
       return key === "player1" ? player1Name : player2Name;
@@ -125,6 +138,7 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
       <p>Ablagekarte:</p>
       <Card card={game.topCard} />
       <h3>Deine Hand:</h3>
+      <p>{getPlayerName(otherKey)} hat noch {otherHandCount} Karten.</p>
       <div style={{ display: "flex", flexWrap: "wrap" }}>
         {hand.map((card, i) => (
           <div
