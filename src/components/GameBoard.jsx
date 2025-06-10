@@ -1,7 +1,7 @@
+
 import { useEffect, useState } from "react";
 import { GameManager } from "../logic/GameManager";
 import Card from "./Card";
-
 
 export default function GameBoard({ mode, player1Name = "Player 1", player2Name = "Player 2" }) {
   const [game, setGame] = useState(() => new GameManager(mode));
@@ -10,7 +10,41 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
   const [message, setMessage] = useState("");
   const [showWinScreen, setShowWinScreen] = useState(false);
 
+  const isBotMode = mode.startsWith("bot");
+
+  // Im Bot-Modus immer die Hand von player1 (Mensch) anzeigen
+  const hand = isBotMode ? game.hands["player1"] : game.hands[game.currentPlayer];
+  const isHumanTurn = mode === "local" || (isBotMode && game.currentPlayer === "player1");
+  // Für Kartenanzahl-Anzeige: Im Bot-Modus immer die Kartenanzahl des Bots anzeigen
+  const otherKey = isBotMode ? "player2" : (game.currentPlayer === "player1" ? "player2" : "player1");
+  const otherHandCount = game.hands[otherKey]?.length || 0;
+  const getPlayerName = (key) => {
+    if (mode === "local") {
+      return key === "player1" ? player1Name : player2Name;
+    }
+    if (isBotMode) {
+      return key === "player1" ? player1Name : "Bot";
+    }
+    return key === "player1" ? "Player 1" : "Player 2";
+  };
+  const getWinnerText = () => {
+    if (game.winner === "draw") {
+      return "Unentschieden! Beide bekommen einen Punkt.";
+    }
+    return `${getPlayerName(game.winner)} hat das Spiel gewonnen!`;
+  };
+
   const triggerUpdate = () => setUpdateFlag(prev => !prev);
+
+  // Bot spielt automatisch, solange er dran ist und das Spiel nicht vorbei ist
+  useEffect(() => {
+    if (isBotMode && game.currentPlayer === "player2" && !game.winner) {
+      setTimeout(() => {
+        game.botPlay(game.hands.player1);
+        triggerUpdate();
+      }, 500);
+    }
+  }, [game.currentPlayer, updateFlag, game.winner, isBotMode]);
 
   const playSelectedCard = () => {
     setMessage("");
@@ -32,12 +66,6 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
           if (game.winner && game.winner !== "draw") restartGame();
         }, 5000);
         return;
-      }
-      if (mode.startsWith("bot") && game.currentPlayer === "player2") {
-        setTimeout(() => {
-          game.botPlay(game.hands.player1);
-          triggerUpdate();
-        }, 500);
       }
     } else {
       setMessage("Diese Karte kann nicht gespielt werden.");
@@ -67,12 +95,6 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
       }, 5000);
       return;
     }
-    if (mode.startsWith("bot") && game.currentPlayer === "player2") {
-      setTimeout(() => {
-        game.botPlay(game.hands.player1);
-        triggerUpdate();
-      }, 500);
-    }
     triggerUpdate();
   };
 
@@ -83,35 +105,6 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
     setMessage("");
     setShowWinScreen(false);
     triggerUpdate();
-  };
-
-  // Bot spielt automatisch, solange er dran ist und das Spiel nicht vorbei ist
-  useEffect(() => {
-    if (mode.startsWith("bot") && game.currentPlayer === "player2" && !game.winner) {
-      setTimeout(() => {
-        game.botPlay(game.hands.player1);
-        triggerUpdate();
-      }, 500);
-    }
-  }, [game.currentPlayer, updateFlag, game.winner]);
-
-  // Im Bot-Modus immer die Hand von player1 (Mensch) anzeigen
-  const hand = mode.startsWith("bot") ? game.hands["player1"] : game.hands[game.currentPlayer];
-  const isHumanTurn = mode === "local" || (mode.startsWith("bot") && game.currentPlayer === "player1");
-  // Für Kartenanzahl-Anzeige: Im Bot-Modus immer die Kartenanzahl des Bots anzeigen
-  const otherKey = mode.startsWith("bot") ? "player2" : (game.currentPlayer === "player1" ? "player2" : "player1");
-  const otherHandCount = game.hands[otherKey]?.length || 0;
-  const getPlayerName = (key) => {
-    if (mode === "local") {
-      return key === "player1" ? player1Name : player2Name;
-    }
-    return key === "player1" ? "Player 1" : "Player 2";
-  };
-  const getWinnerText = () => {
-    if (game.winner === "draw") {
-      return "Unentschieden! Beide bekommen einen Punkt.";
-    }
-    return `${getPlayerName(game.winner)} hat das Spiel gewonnen!`;
   };
 
   return (
