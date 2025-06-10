@@ -2,15 +2,21 @@ import { useEffect, useState } from "react";
 import { GameManager } from "../logic/GameManager";
 import Card from "./Card";
 
+
 export default function GameBoard({ mode }) {
   const [game, setGame] = useState(() => new GameManager(mode));
   const [updateFlag, setUpdateFlag] = useState(false); // UI-Update trigger
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
+  const [message, setMessage] = useState("");
 
   const triggerUpdate = () => setUpdateFlag(prev => !prev);
 
   const playSelectedCard = () => {
-    if (selectedCardIndex === null) return;
+    setMessage("");
+    if (selectedCardIndex === null) {
+      setMessage("Bitte wähle zuerst eine Karte aus.");
+      return;
+    }
     const success = game.playCard(selectedCardIndex);
     if (success) {
       setSelectedCardIndex(null);
@@ -20,11 +26,22 @@ export default function GameBoard({ mode }) {
           triggerUpdate();
         }, 500);
       }
+    } else {
+      setMessage("Diese Karte kann nicht gespielt werden.");
     }
     triggerUpdate();
   };
 
   const drawCard = () => {
+    setMessage("");
+    if (game.deck.length === 0) {
+      setMessage("Der Nachziehstapel ist leer.");
+      return;
+    }
+    if (game.hands[game.currentPlayer].length >= 5) {
+      setMessage("Du hast bereits 5 Karten auf der Hand.");
+      return;
+    }
     game.drawCard();
     if (mode.startsWith("bot") && game.currentPlayer === "player2") {
       setTimeout(() => {
@@ -39,6 +56,7 @@ export default function GameBoard({ mode }) {
     const newGame = new GameManager(mode);
     setGame(newGame);
     setSelectedCardIndex(null);
+    setMessage("");
     triggerUpdate();
   };
 
@@ -73,6 +91,10 @@ export default function GameBoard({ mode }) {
           </div>
         ))}
       </div>
+
+      {message && (
+        <div style={{ color: "red", marginTop: "1rem" }}>{message}</div>
+      )}
 
       {isHumanTurn && (
         <div style={{ marginTop: "1rem" }}>
