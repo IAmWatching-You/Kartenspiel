@@ -26,8 +26,15 @@ const WinScreen = ({ text, onClose }) => (
   </div>
 );
 
-export default function GameBoard({ mode, player1Name = "Player 1", player2Name = "Player 2" }) {
-  const [game, setGame] = useState(() => new GameManager(mode));
+export default function GameBoard({ mode = "local", player1Name = "Player 1", player2Name = "Player 2" }) {
+  const [game, setGame] = useState(() => {
+    try {
+      return new GameManager(mode);
+    } catch (error) {
+      console.error('Failed to initialize GameManager:', error);
+      return new GameManager('local');
+    }
+  });
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
   const [message, setMessage] = useState("");
   const [showRoundWinScreen, setShowRoundWinScreen] = useState(false);
@@ -35,15 +42,18 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
   const [roundWinner, setRoundWinner] = useState(null);
   const [botThinking, setBotThinking] = useState(false);
 
-  const isBotMode = mode.startsWith("bot");
+  const isBotMode = mode?.startsWith("bot") || false;
 
+  // Sicherheitscheck für game.hands
+  const gameHands = game?.hands || {};
+  
   // Im Bot-Modus IMMER die Hand von player1 (Mensch) anzeigen
-  const hand = isBotMode ? game.hands["player1"] : game.hands[game.currentPlayer];
-  const isHumanTurn = !isBotMode || game.currentPlayer === "player1";
+  const hand = isBotMode ? gameHands["player1"] : gameHands[game?.currentPlayer];
+  const isHumanTurn = !isBotMode || game?.currentPlayer === "player1";
   
   // Für Kartenanzahl-Anzeige
-  const otherKey = isBotMode ? "player2" : (game.currentPlayer === "player1" ? "player2" : "player1");
-  const otherHandCount = game.hands[otherKey]?.length || 0;
+  const otherKey = isBotMode ? "player2" : (game?.currentPlayer === "player1" ? "player2" : "player1");
+  const otherHandCount = gameHands[otherKey]?.length || 0;
 
   const getPlayerName = (key) => {
     if (isBotMode) {

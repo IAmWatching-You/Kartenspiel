@@ -26,10 +26,20 @@ export default function StartScreen({ onStart }) {
   };
 
   const handleStartGame = () => {
+    if (!onStart) return;
+    
     if (showNameInputs && player1.trim() && player2.trim()) {
-      onStart({ mode: "local", player1, player2 });
-    } else if (showBotNameInput && player1.trim()) {
-      onStart({ mode: botMode, player1, player2: "Bot" });
+      onStart({ 
+        mode: "local", 
+        player1: player1.trim(), 
+        player2: player2.trim() 
+      });
+    } else if (showBotNameInput && player1.trim() && botMode) {
+      onStart({ 
+        mode: botMode, 
+        player1: player1.trim(), 
+        player2: "Bot" 
+      });
     }
   };
 

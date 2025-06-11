@@ -3,7 +3,10 @@ import { createDeck } from "../data/deck";
 import { botPlayEasy, botPlayHard } from "./botLogic";
 
 export class GameManager {
-  constructor(mode) {
+  constructor(mode = 'local') {
+    if (!mode) {
+      throw new Error('GameManager requires a mode parameter');
+    }
     this.mode = mode;
     this.rounds = { player1: 0, player2: 0 };
     this.resetGame();
