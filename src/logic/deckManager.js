@@ -1,9 +1,13 @@
 import { createDeck } from "../data/deck";
 
 export function shuffle(deck) {
-  return deck
-    .slice()
-    .sort(() => Math.random() - 0.5);
+  // Fisher-Yates Shuffle für bessere Randomisierung
+  const shuffled = deck.slice();
+  for (let i = shuffled.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [shuffled[i], shuffled[j]] = [shuffled[j], shuffled[i]];
+  }
+  return shuffled;
 }
 
 export function dealHands(deck, handSize = 5) {

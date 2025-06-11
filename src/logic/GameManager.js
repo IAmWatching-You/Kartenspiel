@@ -51,8 +51,13 @@ export class GameManager {
 
   isCardPlayable(card) {
     // Ass als 14 werten, wenn auf König gelegt wird
-    const topValue = (this.topCard.label === "K" && card.label === "A") ? 14 : this.topCard.value;
-    const cardValue = (card.label === "A" && this.topCard.label === "K") ? 14 : card.value;
+    const topValue = this.topCard.value;
+    let cardValue = card.value;
+    
+    // Spezialfall: Ass auf König wird als 14 gewertet
+    if (card.label === "A" && this.topCard.label === "K") {
+      cardValue = 14;
+    }
     
     // Gleiche Farbe immer erlaubt
     if (card.suit === this.topCard.suit) return true;
