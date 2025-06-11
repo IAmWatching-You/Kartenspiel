@@ -2,11 +2,37 @@ import { useEffect, useState, useCallback } from "react";
 import { GameManager } from "../logic/GameManager";
 import Card from "./Card";
 
+const WinScreen = ({ text, onClose }) => (
+  <div style={{
+    position: 'fixed',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    backgroundColor: 'rgba(0, 0, 0, 0.8)',
+    display: 'flex',
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 1000
+  }}>
+    <div style={{
+      backgroundColor: 'white',
+      padding: '2rem',
+      borderRadius: '1rem',
+      textAlign: 'center'
+    }}>
+      <h2 style={{ fontSize: '2rem', marginBottom: '1rem' }}>{text}</h2>
+    </div>
+  </div>
+);
+
 export default function GameBoard({ mode, player1Name = "Player 1", player2Name = "Player 2" }) {
   const [game, setGame] = useState(() => new GameManager(mode));
   const [selectedCardIndex, setSelectedCardIndex] = useState(null);
   const [message, setMessage] = useState("");
-  const [showWinScreen, setShowWinScreen] = useState(false);
+  const [showRoundWinScreen, setShowRoundWinScreen] = useState(false);
+  const [showGameWinScreen, setShowGameWinScreen] = useState(false);
+  const [roundWinner, setRoundWinner] = useState(null);
   const [botThinking, setBotThinking] = useState(false);
 
   const isBotMode = mode.startsWith("bot");
@@ -52,18 +78,44 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
   // Bot-Logik
   useEffect(() => {
     let botTimer;
-    const executeBotMove = () => {
+    const executeBotMove = async () => {
+      if (!isBotMode || game.currentPlayer !== "player2" || game.winner || botThinking) {
+        return;
+      }
+
       setBotThinking(true);
-      botTimer = setTimeout(() => {
-        setGame(prevGame => {
-          const updatedGame = new GameManager(mode);
-          Object.assign(updatedGame, prevGame);
-          // Pass true flag to botPlay to allow bot moves (e.g. drawing a card)
-          updatedGame.botPlay(true);
-          return updatedGame;
+      
+      try {
+        // Erste Aktion (Karte spielen oder ziehen)
+        await new Promise(resolve => {
+          botTimer = setTimeout(() => {
+            setGame(prevGame => {
+              const updatedGame = new GameManager(mode);
+              Object.assign(updatedGame, prevGame);
+              updatedGame.botPlay();
+              return updatedGame;
+            });
+            resolve();
+          }, 1000);
         });
+
+        // Wenn der Bot nach dem Ziehen spielen kann, warte und spiele
+        if (game.currentPlayer === "player2" && !game.winner) {
+          await new Promise(resolve => {
+            botTimer = setTimeout(() => {
+              setGame(prevGame => {
+                const updatedGame = new GameManager(mode);
+                Object.assign(updatedGame, prevGame);
+                updatedGame.botPlay();
+                return updatedGame;
+              });
+              resolve();
+            }, 1000);
+          });
+        }
+      } finally {
         setBotThinking(false);
-      }, 1000);
+      }
     };
 
     if (isBotMode && game.currentPlayer === "player2" && !game.winner && !botThinking) {
@@ -153,6 +205,41 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
     });
   }, [isHumanTurn, mode, restartGame]);
 
+  useEffect(() => {
+    const checkWinCondition = () => {
+      // Prüfe auf Spielende
+      if (game.winner) {
+        setShowGameWinScreen(true);
+        setTimeout(() => {
+          setShowGameWinScreen(false);
+          restartGame();
+        }, 5000);
+        return;
+      }
+
+      // Prüfe auf Rundenende (wenn sich die Punktzahl geändert hat)
+      const totalPoints = game.rounds.player1 + game.rounds.player2;
+      if (totalPoints > 0 && !showRoundWinScreen) {
+        let winner;
+        if (game.rounds.player1 > game.rounds.player2) {
+          winner = "player1";
+        } else if (game.rounds.player2 > game.rounds.player1) {
+          winner = "player2";
+        } else {
+          winner = "draw";
+        }
+        setRoundWinner(winner);
+        setShowRoundWinScreen(true);
+        setTimeout(() => {
+          setShowRoundWinScreen(false);
+          setRoundWinner(null);
+        }, 5000);
+      }
+    };
+
+    checkWinCondition();
+  }, [game.rounds.player1, game.rounds.player2, game.winner, restartGame]);
+
   return (
     <div style={{ padding: "1rem" }}>
       {showWinScreen && game.winner && (
@@ -215,6 +302,21 @@ export default function GameBoard({ mode, player1Name = "Player 1", player2Name 
           </>
         )}
       </div>
+
+      {showRoundWinScreen && (
+        <WinScreen 
+          text={roundWinner === "draw" 
+            ? "Unentschieden! Beide Spieler bekommen einen Punkt!" 
+            : `${getPlayerName(roundWinner)} gewinnt die Runde!`}
+        />
+      )}
+      {showGameWinScreen && (
+        <WinScreen 
+          text={game.winner === "draw"
+            ? "Unentschieden! Das Spiel endet ohne Sieger!"
+            : `${getPlayerName(game.winner)} gewinnt das Spiel!`}
+        />
+      )}
     </div>
   );
 }

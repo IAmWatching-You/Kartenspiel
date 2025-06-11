@@ -9,24 +9,43 @@ export function botPlayHard(botHand, topCard, opponentHand) {
   if (playable.length === 0) return null;
 
   // Im Hard-Modus spielt der Bot strategischer:
-  // 1. Wenn möglich, spiele die höchste Karte der gleichen Farbe
+  
+  // 1. Wenn der Gegner nur noch eine Karte hat und wir eine hohe Karte haben, diese spielen
+  if (opponentHand.length === 1) {
+    const highCards = playable.filter(card => card.value >= 10);
+    if (highCards.length > 0) {
+      return highCards.reduce((highest, current) => 
+        current.value > highest.value ? current : highest
+      , highCards[0]);
+    }
+  }
+
+  // 2. Wenn möglich, spiele die höchste Karte der gleichen Farbe
   const sameSuit = playable.filter(card => card.suit === topCard.suit);
   if (sameSuit.length > 0) {
-    return sameSuit.reduce((highest, current) => 
-      current.value > highest.value ? current : highest
-    , sameSuit[0]);
+    // Wenn wir mehrere Karten der gleichen Farbe haben, spiele die zweithöchste
+    // um noch eine höhere Karte für später zu behalten
+    if (sameSuit.length > 1) {
+      const sorted = sameSuit.sort((a, b) => b.value - a.value);
+      return sorted[1];
+    }
+    return sameSuit[0];
   }
 
-  // 2. Sonst spiele die niedrigste mögliche Karte einer anderen Farbe
-  const otherSuits = playable.filter(card => card.suit !== topCard.suit);
-  if (otherSuits.length > 0) {
-    return otherSuits.reduce((lowest, current) => 
-      current.value < lowest.value ? current : lowest
-    , otherSuits[0]);
+  // 3. Wenn der Gegner viele Karten hat (4-5), spiele eine niedrige Karte
+  if (opponentHand.length >= 4) {
+    const otherSuits = playable.filter(card => card.suit !== topCard.suit);
+    if (otherSuits.length > 0) {
+      return otherSuits.reduce((lowest, current) => 
+        current.value < lowest.value ? current : lowest
+      , otherSuits[0]);
+    }
   }
 
-  // Sollte nie erreicht werden, da playable.length > 0
-  return playable[0];
+  // 4. Ansonsten spiele die höchste verfügbare Karte
+  return playable.reduce((highest, current) => 
+    current.value > highest.value ? current : highest
+  , playable[0]);
 }
 
 function isPlayable(card, topCard) {

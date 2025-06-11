@@ -31,9 +31,17 @@ export class GameManager {
 
   checkInitialSituation() {
     const handCurrent = this.hands[this.currentPlayer];
+    
+    // Wenn keine Karte spielbar ist...
     if (!handCurrent.some(card => this.isCardPlayable(card))) {
-      // Wenn keine Karte spielbar ist, automatisch eine Karte ziehen
-      this.drawCard();
+      // ...und die Hand nicht voll ist, ziehe eine Karte
+      if (handCurrent.length < 5) {
+        this.drawCard();
+      } else {
+        // ...und die Hand voll ist, nächster Spieler ist dran
+        this.switchPlayer();
+        this.checkPattSituation();
+      }
     }
   }
 
@@ -43,8 +51,13 @@ export class GameManager {
 
   isCardPlayable(card) {
     // Ass als 14 werten, wenn auf König gelegt wird
-    const topValue = (this.topCard.label === "K" && card.label === "A") ? 14 : this.topCard.value;
-    const cardValue = (card.label === "A" && this.topCard.label === "K") ? 14 : card.value;
+    const topValue = this.topCard.value;
+    let cardValue = card.value;
+    
+    // Spezialfall: Ass auf König wird als 14 gewertet
+    if (card.label === "A" && this.topCard.label === "K") {
+      cardValue = 14;
+    }
     
     // Gleiche Farbe immer erlaubt
     if (card.suit === this.topCard.suit) return true;
@@ -112,20 +125,28 @@ export class GameManager {
     // Verhindere Ziehen während Bot-Zug
     if (this.mode?.startsWith("bot") && this.currentPlayer === "player2") return false;
     
+    const currentHand = this.hands[this.currentPlayer];
+    
     // Prüfe ob Ziehen möglich
-    if (this.hands[this.currentPlayer].length >= 5 || this.deck.length === 0) {
-      this.switchPlayer();
-      this.checkPattSituation();
+    if (currentHand.length >= 5 || this.deck.length === 0) {
+      // Prüfe ob der Spieler überhaupt eine spielbare Karte hat
+      if (!currentHand.some(card => this.isCardPlayable(card))) {
+        this.switchPlayer();
+        this.checkPattSituation();
+      }
       return false;
     }
 
     const newCard = this.deck.shift();
-    this.hands[this.currentPlayer].push(newCard);
+    currentHand.push(newCard);
 
-    // Nachziehen beendet den Zug nur wenn Hand voll oder Karte nicht spielbar
-    if (this.hands[this.currentPlayer].length === 5 || !this.isCardPlayable(newCard)) {
-      this.switchPlayer();
-      this.checkPattSituation();
+    // Wenn die Hand jetzt voll ist oder die neue Karte nicht spielbar ist
+    if (currentHand.length === 5 || !this.isCardPlayable(newCard)) {
+      // Prüfe ob der Spieler überhaupt eine spielbare Karte hat
+      if (!currentHand.some(card => this.isCardPlayable(card))) {
+        this.switchPlayer();
+        this.checkPattSituation();
+      }
     }
     
     return true;
@@ -140,6 +161,13 @@ export class GameManager {
 
     const botHand = this.hands.player2;
     const humanHand = this.hands.player1;
+    
+    // Prüfe zuerst, ob der Bot überhaupt spielen kann
+    if (botHand.length === 5 && !botHand.some(card => this.isCardPlayable(card))) {
+      this.switchPlayer();
+      this.checkPattSituation();
+      return true;
+    }
     
     // Bot-Strategie wählen
     const card = this.mode === "bot-hard" 
